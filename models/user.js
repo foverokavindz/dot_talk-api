@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
   firstName: {
@@ -31,6 +32,10 @@ const userSchema = new mongoose.Schema({
     },
   },
   password: {
+    // unselect
+    type: String,
+  },
+  confirmPassowrd: {
     // unselect
     type: String,
   },
@@ -79,14 +84,43 @@ const userSchema = new mongoose.Schema({
   //   },
 });
 
+// This will trigger the pre('save') middleware
+//  user.password = req.body.newPassword;
+//  await user.save();
+// this is a pre hook
 userSchema.pre('save', async function (next) {
-  // Only run this function if password was actually modified
+  // Only run this function if otp was actually modified
   if (!this.isModified('otp') || !this.otp) return next();
 
   // Hash the otp with cost of 12
   this.otp = await bcrypt.hash(this.otp.toString(), 12);
 
   console.log(this.otp.toString(), 'FROM PRE SAVE HOOK');
+
+  next();
+});
+
+userSchema.pre('save', async function (next) {
+  // Only run this function if password was actually modified
+  if (!this.isModified('confirmPassowrd') || !this.confirmPassowrd)
+    return next();
+
+  // Hash the otp with cost of 12
+  this.confirmPassowrd = await bcrypt.hash(this.confirmPassowrd.toString(), 12);
+
+  console.log(this.confirmPassowrd.toString(), 'FROM PRE SAVE HOOK');
+
+  next();
+});
+
+userSchema.pre('save', async function (next) {
+  // Only run this function if password was actually modified
+  if (!this.isModified('password') || !this.password) return next();
+
+  // Hash the otp with cost of 12
+  this.password = await bcrypt.hash(this.password.toString(), 12);
+
+  console.log(this.password.toString(), 'FROM PRE SAVE HOOK');
 
   next();
 });
@@ -102,5 +136,24 @@ userSchema.methods.correctOTP = async function (candidateOTP, userOTP) {
   return await bcrypt.compare(candidateOTP, userOTP);
 };
 
+userSchema.methods.createPasswordResetToken = function () {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  // access curent user and set the passwordResetToken
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
+};
+
+userSchema.methods.changedPasswordAfter = function (timestamp) {
+  return timestamp < this.passwordChangedAt;
+};
+
 const User = new mongoose.model('User', userSchema);
+
 module.exports = User;

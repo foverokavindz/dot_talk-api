@@ -2,7 +2,9 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const filterObjects = require('../utils/filterObjects');
 const otpGenerator = require('otp-generator');
+const crypto = require('crypto');
 
+// sign JWT token
 const signToken = (userId) => {
   jwt.sign({ userId }, process.env.JWT_SEC);
 };
@@ -146,6 +148,143 @@ exports.login = async (req, res, next) => {
   });
 };
 
-exports.forgotPassword = async (req, res, next) => {};
+exports.protect = async (req, res, next) => {
+  //1. getting the token
 
-exports.resetPassword = async (req, res, next) => {};
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt;
+  } else {
+    res.status(401).json({
+      status: 'error',
+      message: 'You are not logged in. Please log in to get access',
+    });
+
+    return;
+  }
+
+  //2. verify the token
+
+  const decodeUser = jwt.decode(token, process.env.JWT_SEC);
+
+  // check user still exixts
+  const thisUser = await User.findById(decodeUser.userId);
+
+  if (!thisUser) {
+    res.status(401).json({
+      status: 'error',
+      message: 'The user belonging to this token does not exist',
+    });
+
+    return;
+  }
+
+  // check if user changed password after the token was issued
+
+  if (thisUser.changedPasswordAfter(decodeUser.iat)) {
+    res.status(400).json({
+      status: 'error',
+      message: 'User recently updated the password! Please sign in again',
+    });
+  }
+
+  req.user = thisUser;
+
+  next();
+};
+
+exports.forgotPassword = async (req, res, next) => {
+  const { email } = req.body;
+
+  const userDoc = await User.findOne({ email: email });
+
+  if (!userDoc) {
+    res.status(400).json({
+      status: 'error',
+      message: 'There is no user with this email',
+    });
+
+    return;
+  }
+
+  //generate the ramdom token
+  // ?code=skfjskj243234
+
+  const resetToken = user.createPasswordResetToken();
+  await userDoc.save({ validateModifiedOnly: true });
+
+  const resetUrl = `http://localhost:3000/auth/reset-password/${resetToken}`;
+
+  try {
+    // send email
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Token sent to email',
+    });
+  } catch (error) {
+    userDoc.passwordResetToken = undefined;
+    userDoc.passwordResetExpires = undefined;
+
+    // we are setting the validateBeforeSave to false because we are not validating and we are setting undefined values
+    await userDoc.save({ validateBeforeSave: false });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'There was an error sending the email. Try again later',
+    });
+  }
+};
+
+exports.resetPassword = async (req, res, next) => {
+  // get user based on the token
+  const { token: resetToken } = req.params;
+  const { password, confirmPassword } = req.body;
+
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  const userDoc = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  //2. if token is invalid or expired
+  if (!userDoc) {
+    res.status(400).json({
+      status: 'error',
+      message: 'Token is invalid or expired',
+    });
+
+    return;
+  }
+
+  // 3. update users password and set resetToke, and expire to undefined
+
+  userDoc.password = password;
+  userDoc.confirmPassword = confirmPassword;
+  userDoc.passwordResetToken = undefined;
+  userDoc.passwordResetExpires = undefined;
+
+  await userDoc.save();
+
+  // 4. log the user in, send JWT
+
+  // send email to user informing about password reset
+
+  const token = signToken(userDoc._id);
+
+  res.status(200).json({
+    status: 'sucess',
+    message: 'Password reseted succesfully',
+    token,
+  });
+};
