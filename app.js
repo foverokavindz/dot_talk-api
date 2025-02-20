@@ -14,6 +14,8 @@ const xss = require('xss'); // security middleware
 
 const cors = require('cors'); // security middleware
 
+const router = require('./router');
+
 const app = express();
 
 app.use(express.urlencoded({ extended: true })); // request body parsing middleware
@@ -46,5 +48,7 @@ const limiter = rateLimit({
 });
 
 app.use('/talk', limiter); // rate limiting middleware
+
+app.use(router);
 
 module.exports = app; // export app
