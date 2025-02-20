@@ -1,7 +1,7 @@
 const router = require('express').Router();
 
-const userController = require('../controllers/userController');
-const authController = require('../controllers/authController');
+const userController = require('../controllers/user');
+const authController = require('../controllers/auth');
 
 // router.post(
 //   '/generate-zego-token',

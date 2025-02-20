@@ -15,7 +15,7 @@ const http = require('http'); // http server core module
 
 const server = http.createServer(app); // create server instance
 
-const DB = process.env.DBURI.replace(
+const DB = process.env.DB_URI.replace(
   '<USERNAME>',
   process.env.DB_USERNAME
 ).replace('<PASSWORD>', process.env.DB_PASSWORD); // database configuration
@@ -23,8 +23,8 @@ const DB = process.env.DBURI.replace(
 mongoose
   .connect(DB, {
     useNewUrlParser: true,
-    useCreateIndex: true,
-    useFindAndModify: false,
+    // useCreateIndex: true,
+    // useFindAndModify: false,
     useUnifiedTopology: true,
   }) // connect to database
   .then(() => console.log('DB connection successful!'))

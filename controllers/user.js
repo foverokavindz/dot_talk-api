@@ -13,7 +13,7 @@ const User = require('../models/user');
 
 // Please change serverSecret to your serverSecret, serverSecret is string
 // Example：'sdfsdfsd323sdfsdf'
-const serverSecret = process.env.ZEGO_SERVER_SECRET; // type: 32 byte length string
+//const serverSecret = process.env.ZEGO_SERVER_SECRET; // type: 32 byte length string
 
 // exports.getMe = catchAsync(async (req, res, next) => {
 //   res.status(200).json({
@@ -22,7 +22,7 @@ const serverSecret = process.env.ZEGO_SERVER_SECRET; // type: 32 byte length str
 //   });
 // });
 
-exports.updateMe = catchAsync(async (req, res, next) => {
+exports.updateMe = async (req, res, next) => {
   const filteredBody = filterObj(
     req.body,
     'firstName',
@@ -41,7 +41,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     data: userDoc,
     message: 'User Updated successfully',
   });
-});
+};
 
 // exports.getUsers = catchAsync(async (req, res, next) => {
 //   const all_users = await User.find({
