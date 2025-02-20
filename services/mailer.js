@@ -1,11 +1,9 @@
 const sgMail = require('@sendgrid/mail');
 
-// const dotenv = require('dotenv');
-// dotenv.config({
-//   path: '../config.env',
-// });
-
-sgMail.setApiKey(process.env.SG_KEY);
+//sgMail.setApiKey(process.env.SG_KEY);
+sgMail.setApiKey(
+  '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'
+);
 
 const sendSGMail = async ({
   recipient,
@@ -27,16 +25,20 @@ const sendSGMail = async ({
       attachments,
     };
 
-    return sgMail.send(msg);
+    const response = await sgMail.send(msg);
+    return response;
   } catch (error) {
-    console.log(error);
+    console.error('Email sending failed:', error);
+    // Throw a cleaner error object
+    throw new Error(
+      error.response?.body?.errors?.[0]?.message || 'Failed to send email'
+    );
   }
 };
 
 exports.sendEmail = async (args) => {
-  if (!process.env.NODE_ENV === 'development') {
-    return Promise.resolve();
-  } else {
-    return sendSGMail(args);
+  if (!args.recipient) {
+    throw new Error('Recipient email is required');
   }
+  return sendSGMail(args);
 };

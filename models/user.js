@@ -89,13 +89,25 @@ const userSchema = new mongoose.Schema({
 //  await user.save();
 // this is a pre hook
 userSchema.pre('save', async function (next) {
-  // Only run this function if otp was actually modified
+  // Only run this function if OTP  was actually modified
   if (!this.isModified('otp') || !this.otp) return next();
 
   // Hash the otp with cost of 12
   this.otp = await bcrypt.hash(this.otp.toString(), 12);
 
-  console.log(this.otp.toString(), 'FROM PRE SAVE HOOK');
+  console.log(this.otp.toString(), 'otp FROM PRE SAVE HOOK');
+
+  next();
+});
+
+userSchema.pre('save', async function (next) {
+  // Only run this function if password was actually modified
+  if (!this.isModified('password') || !this.password) return next();
+
+  // Hash the otp with cost of 12
+  this.password = await bcrypt.hash(this.password.toString(), 12);
+
+  console.log(this.password.toString(), 'password FROM PRE SAVE HOOK');
 
   next();
 });
@@ -108,19 +120,10 @@ userSchema.pre('save', async function (next) {
   // Hash the otp with cost of 12
   this.confirmPassowrd = await bcrypt.hash(this.confirmPassowrd.toString(), 12);
 
-  console.log(this.confirmPassowrd.toString(), 'FROM PRE SAVE HOOK');
-
-  next();
-});
-
-userSchema.pre('save', async function (next) {
-  // Only run this function if password was actually modified
-  if (!this.isModified('password') || !this.password) return next();
-
-  // Hash the otp with cost of 12
-  this.password = await bcrypt.hash(this.password.toString(), 12);
-
-  console.log(this.password.toString(), 'FROM PRE SAVE HOOK');
+  console.log(
+    this.confirmPassowrd.toString(),
+    'confirm pass FROM PRE SAVE HOOK'
+  );
 
   next();
 });

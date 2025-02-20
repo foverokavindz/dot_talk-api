@@ -13,11 +13,9 @@ const { model } = require('mongoose');
 const filterObjects = (obj, ...allowedFields) => {
   const newObj = {};
   Object.keys(obj).forEach((el) => {
-    if (allowedFields.includes(el)) {
-      newObj[el] = obj[el];
-    }
-    return newObj;
+    if (allowedFields.includes(el)) newObj[el] = obj[el];
   });
+  return newObj;
 };
 
-model.exports = filterObjects;
+module.exports = filterObjects;

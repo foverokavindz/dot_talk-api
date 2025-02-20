@@ -47,7 +47,7 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again after an hour',
 });
 
-app.use('/talk', limiter); // rate limiting middleware
+// app.use('/talk', limiter); // rate limiting middleware
 
 app.use(router);
 

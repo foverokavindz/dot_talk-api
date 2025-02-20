@@ -7,11 +7,12 @@ const { sendEmail } = require('../services/mailer');
 
 // sign JWT token
 const signToken = (userId) => {
-  jwt.sign({ userId }, process.env.JWT_SEC);
+  return jwt.sign({ userId }, process.env.JWT_SEC);
 };
 
 exports.register = async (req, res, next) => {
   const { firstName, lastName, email, password } = req.body;
+
   const existingUser = await User.findOne({ email: email });
 
   const filteredBody = filterObjects(
@@ -23,12 +24,14 @@ exports.register = async (req, res, next) => {
   );
 
   if (existingUser && existingUser.varified) {
+    // if user is already in the database and verified, update the user
     res.status(400).json({
       status: 'error',
       message: 'This email already in use',
     });
     return;
   } else if (existingUser) {
+    // if user is already in the database not verified, update the user
     await User.findOneAndUpdate({ email: email }, filteredBody, {
       new: true,
       validateModifiledOnly: true,
@@ -40,43 +43,64 @@ exports.register = async (req, res, next) => {
     // if user is not found, create a new user
     const newUser = await User.create(filteredBody);
 
-    // generate OTP
-
     req.userId = newUser._id;
 
+    // generate OTP
     next();
   }
 };
 
+// this will be called after the register function
 exports.sendOTP = async (req, res, next) => {
   const { userId } = req;
 
-  const new_OTP = otpGenerator.generate(6, {
-    lowerCaseAlphabets: false,
-    upperCaseAlphabets: false,
-    specialChars: false,
-  });
+  try {
+    const new_OTP = otpGenerator.generate(6, {
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
 
-  const otp_expiry_time = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // Find the user first
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
 
-  await User.findByIdAndUpdate(userId, {
-    otp: new_OTP,
-    otp_expiry_time,
-  });
+    // Set the OTP and expiry time
+    user.otp = new_OTP;
+    user.otp_expiry_time = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  // TODO send email
+    // Save the user to trigger the pre-save middleware
+    await user.save({ validateModifiedOnly: true });
 
-  sendEmail({
-    recipient: 'kavindamadhuranga74.2@gmail.com',
-    sender: 'kavindamadhuranga74@gmail.com',
-    subject: 'OTP for email verification',
-    text: 'Your OTP is ' + new_OTP + '. This OTP is valid for 10 minutes',
-  });
+    // Then try to send the email
+    try {
+      await sendEmail({
+        recipient: req.body.email,
+        sender: 'kavindamadhuranga74@gmail.com',
+        subject: 'OTP for email verification',
+        text: 'Your OTP is ' + new_OTP + '. This OTP is valid for 10 minutes',
+      });
+    } catch (emailError) {
+      // If email fails, revert the OTP update
+      user.otp = undefined;
+      user.otp_expiry_time = undefined;
+      await user.save({ validateModifiedOnly: true });
+      throw emailError;
+    }
 
-  res.status(200).json({
-    status: 'success',
-    message: 'OTP sent successfully',
-  });
+    res.status(200).json({
+      status: 'success',
+      message: 'OTP sent successfully',
+    });
+  } catch (error) {
+    console.error('OTP sending failed:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error sending OTP email',
+    });
+  }
 };
 
 exports.verifyOTP = async (req, res, next) => {
@@ -86,6 +110,8 @@ exports.verifyOTP = async (req, res, next) => {
     email: email,
     otp_expiry_time: { $gt: Date.now() },
   });
+
+  console.log('userDoc :>> ', userDoc);
 
   if (!userDoc) {
     res.status(400).json({
@@ -224,13 +250,28 @@ exports.forgotPassword = async (req, res, next) => {
   //generate the ramdom token
   // ?code=skfjskj243234
 
-  const resetToken = user.createPasswordResetToken();
+  const resetToken = userDoc.createPasswordResetToken();
   await userDoc.save({ validateModifiedOnly: true });
 
   const resetUrl = `http://localhost:3000/auth/reset-password/${resetToken}`;
 
   try {
     // send email
+
+    try {
+      await sendEmail({
+        recipient: email,
+        sender: 'kavindamadhuranga74@gmail.com',
+        subject: 'Password Reset Link',
+        text: resetUrl,
+      });
+    } catch (emailError) {
+      // If email fails, revert the OTP update
+      userDoc.passwordResetToken = undefined;
+      userDoc.passwordResetExpires = undefined;
+      await userDoc.save({ validateModifiedOnly: true });
+      throw emailError;
+    }
 
     res.status(200).json({
       status: 'success',
@@ -252,7 +293,8 @@ exports.forgotPassword = async (req, res, next) => {
 
 exports.resetPassword = async (req, res, next) => {
   // get user based on the token
-  const { token: resetToken } = req.params;
+  //const { token: resetToken } = req.params;
+  const { token: resetToken } = req.body;
   const { password, confirmPassword } = req.body;
 
   const hashedToken = crypto
