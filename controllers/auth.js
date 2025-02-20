@@ -3,6 +3,7 @@ const User = require('../models/user');
 const filterObjects = require('../utils/filterObjects');
 const otpGenerator = require('otp-generator');
 const crypto = require('crypto');
+const { sendEmail } = require('../services/mailer');
 
 // sign JWT token
 const signToken = (userId) => {
@@ -64,6 +65,13 @@ exports.sendOTP = async (req, res, next) => {
   });
 
   // TODO send email
+
+  sendEmail({
+    recipient: 'kavindamadhuranga74.2@gmail.com',
+    sender: 'kavindamadhuranga74@gmail.com',
+    subject: 'OTP for email verification',
+    text: 'Your OTP is ' + new_OTP + '. This OTP is valid for 10 minutes',
+  });
 
   res.status(200).json({
     status: 'success',
