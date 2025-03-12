@@ -2,7 +2,7 @@ const app = require('./app');
 const dotenv = require('dotenv'); // environment variables configuration
 const mongoose = require('mongoose'); // MongoDB object modeling tool
 const { Server } = require('socket.io');
-const User = require('./models/user');
+//const User = require('./models/user');
 
 dotenv.config({ path: './config.env' }); // configure environment variables
 
@@ -46,30 +46,30 @@ server.listen(port, () => {
   console.log('Server running on port ' + port);
 }); // run server on port 3000
 
-io.on('connection', async (socket) => {
-  console.log('Socket: ' + socket);
-  const user_id = socket.handshake.query['user_id'];
-  console.log('User connected: ' + user_id);
+// io.on('connection', async (socket) => {
+//   console.log('Socket: ' + socket);
+//   const user_id = socket.handshake.query['user_id'];
+//   console.log('User connected: ' + user_id);
 
-  if (user_id) {
-    await User.findByIdAndUpdate(user_id, { socket_id: socket.id });
-  }
+//   if (user_id) {
+//     await User.findByIdAndUpdate(user_id, { socket_id: socket.id });
+//   }
 
-  // we can write out soket event listners here
+//   // we can write out soket event listners here
 
-  socket.on('friend_request', async (data) => {
-    console.log(data.to);
+//   socket.on('friend_request', async (data) => {
+//     console.log(data.to);
 
-    // Create New Friend Request
+//     // Create New Friend Request
 
-    // to: user_id
-    const user = await User.findById(data.to).emit('new_friend_request', data);
+//     // to: user_id
+//     const user = await User.findById(data.to).emit('new_friend_request', data);
 
-    if (user) {
-      io.to(user.socket_id);
-    }
-  });
-});
+//     if (user) {
+//       io.to(user.socket_id);
+//     }
+//   });
+// });
 
 // handle unhandled promise rejections and uncaught exceptions to prevent server crashes
 process.on('unhandledRejection', (err) => {
