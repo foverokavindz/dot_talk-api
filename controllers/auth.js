@@ -76,7 +76,7 @@ exports.sendOTP = async (req, res, next) => {
 
     // Then try to send the email
 
-    // console.log('OTP :>> ', new_OTP);
+    //console.log('OTP :>> ', new_OTP);
     try {
       await sendEmail({
         recipient: req.body.email,
@@ -255,7 +255,10 @@ exports.forgotPassword = async (req, res, next) => {
   const resetToken = userDoc.createPasswordResetToken();
   await userDoc.save({ validateModifiedOnly: true });
 
-  const resetUrl = `${process.env.FRONTEND_URL}/auth/new-password?token=${resetToken}`;
+  const resetUrl =
+    process.env.NODE_ENV === 'development'
+      ? `${process.env.FRONTEND_URL}/auth/new-password?token=${resetToken}`
+      : `${process.env.PROD_FRONTEND_URL}/auth/new-password?token=${resetToken}`;
 
   try {
     // send email
