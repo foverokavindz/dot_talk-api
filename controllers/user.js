@@ -43,7 +43,7 @@ exports.updateMe = async (req, res, next) => {
   });
 };
 
-exports.getUsers = catchAsync(async (req, res, next) => {
+exports.getUsers = async (req, res, next) => {
   const all_users = await User.find({
     verified: true,
   }).select('firstName lastName _id');
@@ -61,7 +61,7 @@ exports.getUsers = catchAsync(async (req, res, next) => {
     data: remaining_users,
     message: 'Users found successfully!',
   });
-});
+};
 
 // exports.getAllVerifiedUsers = catchAsync(async (req, res, next) => {
 //   const all_users = await User.find({
